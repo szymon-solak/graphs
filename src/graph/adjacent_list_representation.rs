@@ -19,7 +19,6 @@ impl AdjacentList {
             }
 
             list.insert(node.id.to_owned(), node);
-
         }
 
         AdjacentList { nodes: list }
@@ -37,6 +36,13 @@ impl GraphRepresentation for AdjacentList {
             .next()
             .map(|id| self.get_node(id))
             .unwrap_or(None)
+    }
+
+    fn get_nodes(&self) -> Vec<&Node> {
+        self.nodes
+            .keys()
+            .filter_map(|node_id| self.get_node(node_id))
+            .collect()
     }
 
     fn get_edges(&self, node_id: &String) -> Vec<&Node> {

@@ -1,64 +1,63 @@
-use std::cell::RefCell;
 use crate::graph::graph_representation::GraphRepresentation;
 use crate::graph::node::Node;
+use std::collections::HashMap;
 
-pub struct Dfs<'a>(
-    pub &'a dyn GraphRepresentation,
-);
+pub struct Dfs<'a>(pub &'a dyn GraphRepresentation);
 
 impl<'a> IntoIterator for &'a Dfs<'a> {
     type Item = &'a Node;
     type IntoIter = DfsIntoIterator<'a>;
 
     fn into_iter(self) -> Self::IntoIter {
+        let mut stack = vec![];
+        let visited = vec![];
+
+        let iters = self
+            .0
+            .get_nodes()
+            .iter()
+            .map(|n| (&n.id, self.0.get_edges(&n.id)))
+            .map(|(id, edge_list)| (id, edge_list.into_iter()))
+            .collect();
+
+        if let Some(node) = self.0.first() {
+            stack.push(node);
+        }
+
         DfsIntoIterator {
-            inner: self.0,
-            current_node: self.0.first(),
-            iter_stack: vec![],
+            stack,
+            visited,
+            iters,
         }
     }
 }
 
 pub struct DfsIntoIterator<'a> {
-    inner: &'a dyn GraphRepresentation,
-    iter_stack: Vec<RefCell<Vec<&'a Node>>>,
-    current_node: Option<&'a Node>,
+    stack: Vec<&'a Node>,
+    visited: Vec<&'a String>,
+    iters: HashMap<&'a String, std::vec::IntoIter<&'a Node>>,
 }
 
 impl<'a> Iterator for DfsIntoIterator<'a> {
     type Item = &'a Node;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let current = self.current_node;
-        
-        if let Some(node) = self.current_node {
-            if let Some(next) = self.inner.get_edges(&node.id).first() {
-                if next.edges.len() > 0 {
-                    let edges = self.inner.get_edges(&node.id)[1..].iter().map(|n| n.to_owned()).collect::<Vec<&Node>>();
-                    self.iter_stack.push(RefCell::new(edges));
+        while let Some(&current) = self.stack.last() {
+            if let Some(neighbour) = self.iters.get_mut(&current.id).unwrap().next() {
+                if !self.visited.contains(&&neighbour.id) {
+                    self.stack.push(&neighbour);
                 }
-                self.current_node = Some(next.to_owned());
             } else {
-                self.current_node = None;
+                self.stack.pop();
             }
 
-            return current
-        }
-
-        if let Some(last_stack) = self.iter_stack.last() {
-            if last_stack.borrow_mut().len() == 0 {
-                self.iter_stack.pop();
-                self.next();
-
-                return current;
-            }
-
-            if let Some(node) = last_stack.borrow_mut().pop() {
-                return Some(node);
+            if !self.visited.contains(&&current.id) {
+                self.visited.push(&current.id);
+                return Some(current);
             }
         }
 
-        current
+        None
     }
 }
 

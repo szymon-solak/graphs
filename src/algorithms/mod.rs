@@ -1,3 +1,3 @@
 mod dfs;
 
-pub use dfs::dfs;
+pub use dfs::{Dfs};
